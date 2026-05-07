@@ -28,20 +28,21 @@ jobs:
       - name: 拉取上游更新
         run: git fetch upstream
 
-      - name: 合并更新
+      - name: 合并并检测是否有更新
         id: merge
         run: |
-          merge_output=$(git merge upstream/main --no-edit --allow-unrelated-histories)
-          echo "merge_result=$merge_output" >> $GITHUB_OUTPUT
+          merge_output=$(git merge upstream/main --no-edit --allow-unrelated-histories 2>&1)
+          echo "result=$merge_output" >> $GITHUB_OUTPUT
           echo "$merge_output"
 
       - name: 推送更新
+        if: success()
         run: git push origin main
 
-      - name: PushPlus 同步成功通知
-        if: contains(steps.merge.outputs.merge_result, 'Fast-forward') || contains(steps.merge.outputs.merge_result, '更新') || contains(steps.merge.outputs.merge_result, 'changed')
-        uses: foxundermoon/wechat-pushplus@v2
-        with:
-          token: AAAABBBBCCCC
-          title: ✅ 同步上游仓库成功
-          content: 已自动同步上游 eooce/NanoLimbo 最新代码
+      - name: 发送 PushPlus 成功通知
+        if: success() && contains(steps.merge.outputs.result, 'Fast-forward')
+        run: |
+          curl -s -X POST https://www.pushplus.plus/send \
+            -d "token=7a8278dc72974977a03bb6b804155223" \
+            -d "title=✅  同步上游github仓库成功" \
+            -d "content=已自动同步上游最新代码"
